@@ -658,3 +658,8 @@ test/util/opal_sos
 test/util/opal_path_nfs
 test/util/opal_path_nfs.out
 test/util/opal_bit_ops
+
+test/monitoring/check_monitoring
+test/monitoring/example_reduce_count
+test/monitoring/test_overhead
+test/monitoring/test_pvar_access
