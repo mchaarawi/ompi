@@ -5,6 +5,7 @@
 void ADIOI_DAOS_Close(ADIO_File fd, int *error_code)
 {
     struct ADIO_DAOS_cont *cont = (struct ADIO_DAOS_cont *)fd->fs_ptr;
+    static char myname[] = "ADIOI_DAOS_CLOSE";
     int rc;
 
     rc = daos_cont_close(cont->coh, NULL);
@@ -14,7 +15,7 @@ void ADIOI_DAOS_Close(ADIO_File fd, int *error_code)
                                            myname, __LINE__,
                                            ADIOI_DAOS_error_convert(rc),
                                            "Container Close failed", 0);
-        goto err_cont;
+        return;
     }
 
     ADIOI_Free(fd->fs_ptr);

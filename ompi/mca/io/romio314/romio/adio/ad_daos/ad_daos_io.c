@@ -2,16 +2,25 @@
 
 #include "ad_daos.h"
 
+enum {
+    DAOS_WRITE,
+    DAOS_READ
+};
+
 static void DAOS_IOContig(ADIO_File fd, void * buf, int count,
 			  MPI_Datatype datatype, int file_ptr_type,
 			  ADIO_Offset offset, ADIO_Status *status,
 			  int flag, int *error_code)
 {
+    MPI_Count datatype_size;
+    uint64_t len;
     daos_array_ranges_t ranges;
     daos_range_t rg;
     daos_sg_list_t sgl;
     daos_iov_t iov;
+    int ret;
     struct ADIO_DAOS_cont *cont = fd->fs_ptr;
+    static char myname[] = "ADIOI_DAOS_IOCONTIG";
 
     MPI_Type_size_x(datatype, &datatype_size);
     len = (ADIO_Offset)datatype_size * (ADIO_Offset)count;
@@ -36,8 +45,8 @@ static void DAOS_IOContig(ADIO_File fd, void * buf, int count,
 #endif
 
     if (flag == DAOS_WRITE) {
-	    rc = daos_array_write(cont->oh, 0, &ranges, &sgl, NULL, NULL);
-	    if (rc != 0) {
+	    ret = daos_array_write(cont->oh, 0, &ranges, &sgl, NULL, NULL);
+	    if (ret != 0) {
 		    *error_code = MPIO_Err_create_code(MPI_SUCCESS,
 						       MPIR_ERR_RECOVERABLE,
 						       myname, __LINE__,
@@ -47,8 +56,8 @@ static void DAOS_IOContig(ADIO_File fd, void * buf, int count,
 	    }
     }
     else if (flag == DAOS_READ) {
-	    rc = daos_array_read(cont->oh, 0, &ranges, &sgl, NULL, NULL);
-	    if (rc != 0) {
+	    ret = daos_array_read(cont->oh, 0, &ranges, &sgl, NULL, NULL);
+	    if (ret != 0) {
 		    *error_code = MPIO_Err_create_code(MPI_SUCCESS,
 						       MPIR_ERR_RECOVERABLE,
 						       myname, __LINE__,
@@ -69,8 +78,7 @@ static void DAOS_IOContig(ADIO_File fd, void * buf, int count,
     fd->fp_sys_posn = offset + len;
 
 #ifdef HAVE_STATUS_SET_BYTES
-    if (err != -1 && status)
-	    MPIR_Status_set_bytes(status, datatype, len);
+    MPIR_Status_set_bytes(status, datatype, len);
 #endif
 
     *error_code = MPI_SUCCESS;

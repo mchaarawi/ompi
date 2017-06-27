@@ -246,7 +246,7 @@ void ADIOI_DAOS_Open(ADIO_File fd, int *error_code)
                                            myname, __LINE__,
                                            ADIOI_DAOS_error_convert(rc),
                                            "Array Create Failed", 0);
-        daos_cont_close(coh, NULL);
+        daos_cont_close(cont->coh, NULL);
         free(cont);
         return;
     }
