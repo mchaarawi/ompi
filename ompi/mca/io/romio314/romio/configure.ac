@@ -197,7 +197,7 @@ dnl An m4 macro for use with m4_foreach_w and friends.  You should modify this
 dnl list if you want to add a known file system.  The list is just whitespace
 dnl separated, so you can use newlines and tabs as well.
 m4_define([known_filesystems_m4_w],
-          [nfs ufs pfs pvfs pvfs2 testfs xfs panfs gridftp lustre gpfs zoidfs hfs piofs sfs])dnl
+          [daos nfs ufs pfs pvfs pvfs2 testfs xfs panfs gridftp lustre gpfs zoidfs hfs piofs sfs])dnl
 dnl
 dnl An m4 macro for use with m4_foreach and friends.  Expands to a quoted list of
 dnl quoted elements.  A bit easier to use without unintended expansion than the
@@ -234,6 +234,8 @@ AC_ARG_WITH(file-system,[
 --with-file-system=name - Build with support for the named file systems],,)
 AC_ARG_WITH(pvfs2,[
 --with-pvfs2=path - Path to installation of PVFS (version 2)],,)
+AC_ARG_WITH(daos,[
+--with-daos=path - Path to installation of DAOS],,)
 AC_ARG_WITH(mpi-impl,[
 --with-mpi-impl=name - Specify MPI implementation to build ROMIO for],,)
 dnl
@@ -820,7 +822,6 @@ if test "$PVFS2_CONFIG" = "notfound" -a -n "$with_pvfs2" ; then
 fi
 #############################################
 
-
 # Setup an AM_CONDITIONAL named BUILD_AD_FOO for use in each adio's Makefile.mk.
 # This must come *after* the condition becomes valid, in this case after all
 # $file_system_foo variables have been set.
@@ -883,7 +884,7 @@ if test "$file_system_args" = "PE" -a -n "$file_system_gpfs"; then
     AM_CONDITIONAL([BUILD_AD_PE],[true])
 fi
 
-# echo "with_file_system is :"$with_file_system": file_system_args is :"$file_system_args": FILE_SYSTEM is :"$FILE_SYSTEM":"
+echo "with_file_system is :"$with_file_system": file_system_args is :"$file_system_args": FILE_SYSTEM is :"$FILE_SYSTEM":"
 
 if test -n "$file_system_hfs"; then
     AC_DEFINE(ROMIO_HFS,1,[Define for ROMIO with HFS])
@@ -1007,6 +1008,18 @@ if test -n "$file_system_pvfs2"; then
 	AC_DEFINE(ROMIO_PVFS2,1,[Define for ROMIO with PVFS2])
 	AC_DEFINE(HAVE_PVFS2_SUPER_MAGIC, 1, [Define if PVFS2_SUPER_MAGIC defined.]),
         AC_MSG_ERROR([PVFS2 support requested but cannot find pvfs2.h header file])
+    )
+fi
+
+#
+# Verify presence of daos_api.h
+#
+if test -n "$file_system_daos"; then
+    CPPFLAGS="$CPPFLAGS $CFLAGS"
+    AC_CHECK_HEADERS(daos_types.h,
+	AC_DEFINE(ROMIO_DAOS,1,[Define for ROMIO with DAOS])
+	AC_DEFINE(HAVE_DAOS_LIB, 1, [Define if DAOS available.]),
+        AC_MSG_ERROR([DAOS support requested but cannot find daos_types.h header file])
     )
 fi
 
@@ -1871,7 +1884,7 @@ AM_PROG_LIBTOOL
 
 # Open MPI: setup the AM_CONDITIONALs to build the different adio devices
  m4_foreach([my_fs],
-  [gpfs, gridftp, hfs, lustre, nfs, ntfs, panfs, pfs, pvfs, piofs, pvfs, pvfs2, sfs, testfs, ufs, xfs, zoidfs],
+  [daos, gpfs, gridftp, hfs, lustre, nfs, ntfs, panfs, pfs, pvfs, piofs, pvfs, pvfs2, sfs, testfs, ufs, xfs, zoidfs],
   [AM_CONDITIONAL(BUILD_[]AS_TR_CPP(my_fs), [test -n "$file_system_]my_fs["])])
 
 # support gcov test coverage information

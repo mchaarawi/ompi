@@ -6,6 +6,16 @@
  */
 
 #include "adio.h"
+#include "adio_extern.h"
+
+#ifdef ROMIO_DAOS
+#include <daos_types.h>
+#include <daos_api.h>
+#include <crt_util/common.h>
+
+daos_handle_t daos_pool_oh;
+#endif /* ROMIO_DAOS */
+
 
 ADIOI_Flatlist_node *ADIOI_Flatlist = NULL;
 ADIOI_Datarep *ADIOI_Datarep_head = NULL;
@@ -47,6 +57,57 @@ static void my_consensus(void *invec, void *inoutvec, int *len, MPI_Datatype *da
     return;
 }
 
+/* MSC - Make a generic DAOS function instead */
+static daos_rank_list_t *
+daos_rank_list_parse(const char *str, const char *sep)
+{
+	daos_rank_t	       *buf;
+	int			cap = 8;
+	daos_rank_list_t       *ranks = NULL;
+	char		       *s;
+	char		       *p;
+	int			n = 0;
+
+	buf = ADIOI_Malloc(sizeof(*buf) * cap);
+	if (buf == NULL)
+            goto out;
+	s = strdup(str);
+	if (s == NULL)
+            goto out_buf;
+
+	while ((s = strtok_r(s, sep, &p)) != NULL) {
+		if (n == cap) {
+			daos_rank_t    *buf_new;
+			int		cap_new;
+
+			/* Double the buffer. */
+			cap_new = cap * 2;
+			buf_new = ADIOI_Malloc(sizeof(*buf_new) * cap_new);
+			if (buf_new == NULL)
+                            goto out_s;
+			memcpy(buf_new, buf, sizeof(*buf_new) * n);
+			free(buf);
+			buf = buf_new;
+			cap = cap_new;
+		}
+		buf[n] = atoi(s);
+		n++;
+		s = NULL;
+	}
+
+	ranks = crt_rank_list_alloc(n);
+	if (ranks == NULL)
+            goto out_s;
+	memcpy(ranks->rl_ranks, buf, sizeof(*buf) * n);
+
+out_s:
+	free(s);
+out_buf:
+	free(buf);
+out:
+	return ranks;
+}
+
 void ADIO_Init(int *argc, char ***argv, int *error_code)
 {
 #if defined(ROMIO_XFS) || defined(ROMIO_LUSTRE)
@@ -78,6 +139,47 @@ void ADIO_Init(int *argc, char ***argv, int *error_code)
     else ADIOI_Direct_write = 0;
 #endif
 
+#ifdef ROMIO_DAOS
+    char *uuid_str;
+    char *svcl_str;
+    char *group;
+    uuid_t pool_uuid;
+    daos_pool_info_t pool_info;
+    daos_rank_list_t *svcl = NULL;
+    int rc;
+
+    uuid_str = getenv ("DAOS_POOL");
+    if (uuid_str != NULL) {
+        if (uuid_parse(uuid_str, pool_uuid) < 0) {
+            printf("Failed to parse pool UUID env\n");
+            return;
+        }
+    }
+
+    svcl_str = getenv ("DAOS_SVCL");
+    if (svcl_str != NULL) {
+        svcl = daos_rank_list_parse(svcl_str, ":");
+        if (svcl == NULL) {
+            printf("Failed to parse SVC list env\n");
+            return;
+        }
+    }
+
+    group = getenv ("DAOS_GROUP");
+    rc = daos_pool_connect(pool_uuid, group, svcl, DAOS_PC_RW, &daos_pool_oh,
+                           &pool_info, NULL);
+    if (rc < 0)
+        printf("Failed to connect to pool\n");
+
+    if (group)
+        free(group);
+    if (svcl)
+        crt_rank_list_free(svcl);
+    if (svcl_str)
+        free(svcl_str);
+    if (uuid_str)
+        free(uuid_str);
+#endif
 
 #ifdef ADIOI_MPE_LOGGING
     {
