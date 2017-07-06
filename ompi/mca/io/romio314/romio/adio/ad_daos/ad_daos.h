@@ -6,8 +6,24 @@
 #include <daos_types.h>
 #include <daos_api.h>
 #include <daos_array.h>
+#include <daos_event.h>
 
 #include "adio.h"
+
+
+/* MSC - Generalized requests extensions just to be able to compile.. can't
+ * support async now since ompi doesn't have those extensions */
+typedef int MPIX_Grequest_class;
+typedef int (MPIX_Grequest_poll_function)(void *, MPI_Status *);
+typedef int (MPIX_Grequest_wait_function)(int, void **, double, MPI_Status *);
+int PMPIX_Grequest_class_create(MPI_Grequest_query_function *query_fn,
+                                MPI_Grequest_free_function *free_fn,
+                                MPI_Grequest_cancel_function *cancel_fn,
+                                MPIX_Grequest_poll_function *poll_fn,
+                                MPIX_Grequest_wait_function *wait_fn,
+                                MPIX_Grequest_class *greq_class);
+int PMPIX_Grequest_class_allocate(MPIX_Grequest_class greq_class, 
+                                  void *extra_state, MPI_Request *request);
 
 struct ADIO_DAOS_cont {
     /** container uuid */
@@ -20,6 +36,8 @@ struct ADIO_DAOS_cont {
     daos_handle_t	oh;
     /** data to store in a dkey block */
     daos_size_t		stripe_size;
+    /** Event queue to store all async requests on file */
+    daos_handle_t	eqh;
 };
 
 int ADIOI_DAOS_error_convert(int error);
@@ -30,8 +48,16 @@ void ADIOI_DAOS_ReadContig(ADIO_File fd, void *buf, int count,
 			   MPI_Datatype datatype, int file_ptr_type,
 			   ADIO_Offset offset, ADIO_Status *status,
 			   int *error_code);
-void ADIOI_DAOS_WriteContig(ADIO_File fd, void *buf, int count,
+void ADIOI_DAOS_WriteContig(ADIO_File fd, const void *buf, int count,
 			    MPI_Datatype datatype, int file_ptr_type,
 			    ADIO_Offset offset, ADIO_Status *status,
 			    int *error_code);
+void ADIOI_DAOS_IReadContig(ADIO_File fd, void *buf, int count,
+			    MPI_Datatype datatype, int file_ptr_type,
+			    ADIO_Offset offset, MPI_Request *request,
+			    int *error_code);
+void ADIOI_DAOS_IWriteContig(ADIO_File fd, const void *buf, int count,
+                             MPI_Datatype datatype, int file_ptr_type,
+                             ADIO_Offset offset, MPI_Request *request,
+                             int *error_code);
 #endif
