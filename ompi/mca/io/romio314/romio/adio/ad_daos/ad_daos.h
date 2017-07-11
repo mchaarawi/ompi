@@ -5,7 +5,7 @@
 
 #include <daos_types.h>
 #include <daos_api.h>
-#include <daos_array.h>
+#include <daos_addons.h>
 #include <daos_event.h>
 
 #include "adio.h"
