@@ -40,9 +40,11 @@ void ADIOI_GEN_OpenColl(ADIO_File fd, int rank,
 	   tmp_comm = fd->comm;
 	   fd->comm = MPI_COMM_SELF;
 	   (*(fd->fns->ADIOI_xxx_Open))(fd, error_code);
+
 	   fd->comm = tmp_comm;
 	   MPI_Bcast(error_code, 1, MPI_INT, \
 		     fd->hints->ranklist[0], fd->comm);
+
 	   /* if no error, close the file and reopen normally below */
 	   if (*error_code == MPI_SUCCESS)
 	       (*(fd->fns->ADIOI_xxx_Close))(fd, error_code);
@@ -61,6 +63,7 @@ void ADIOI_GEN_OpenColl(ADIO_File fd, int rank,
 		   access_mode ^= ADIO_EXCL;
        }
     }
+
     fd->blksize = 1024*1024*4; /* this large default value should be good for
 				 most file systems.  any ROMIO driver is free
 				 to stat the file and find an optimial value */

@@ -174,6 +174,7 @@ void ADIOI_DAOS_Open(ADIO_File fd, int *error_code)
 
     cont = (struct ADIO_DAOS_cont *)ADIOI_Malloc(sizeof(struct ADIO_DAOS_cont));
     if (cont == NULL) {
+        printf("mem alloc failed.\n");
 	*error_code = MPIO_Err_create_code(MPI_SUCCESS,
 					   MPIR_ERR_RECOVERABLE,
 					   myname, __LINE__,
@@ -194,6 +195,7 @@ void ADIOI_DAOS_Open(ADIO_File fd, int *error_code)
         rc = daos_cont_open(daos_pool_oh, cont->uuid, DAOS_COO_RO, &cont->coh,
                             NULL, NULL);
         if (rc == 0) {
+            printf("failed to open container (%d)\n", rc);
             *error_code = MPIO_Err_create_code(MPI_SUCCESS,
                                                MPIR_ERR_RECOVERABLE,
                                                myname, __LINE__,
@@ -206,6 +208,7 @@ void ADIOI_DAOS_Open(ADIO_File fd, int *error_code)
     if (fd->access_mode & ADIO_CREATE) {
         rc = daos_cont_create(daos_pool_oh, cont->uuid, NULL);
         if (rc != 0) {
+            printf("failed to create container (%d)\n", rc);
             *error_code = MPIO_Err_create_code(MPI_SUCCESS,
                                                MPIR_ERR_RECOVERABLE,
                                                myname, __LINE__,
@@ -218,6 +221,7 @@ void ADIOI_DAOS_Open(ADIO_File fd, int *error_code)
     rc = daos_cont_open(daos_pool_oh, cont->uuid, DAOS_COO_RO, &cont->coh,
                         NULL, NULL);
     if (rc != 0) {
+        printf("failed to open container (%d)\n", rc);
         *error_code = MPIO_Err_create_code(MPI_SUCCESS,
                                            MPIR_ERR_RECOVERABLE,
                                            myname, __LINE__,
@@ -241,6 +245,7 @@ void ADIOI_DAOS_Open(ADIO_File fd, int *error_code)
     rc = daos_array_create(cont->coh, cont->oid, 0, 1, cont->stripe_size,
                            &cont->oh, NULL);
     if (rc != 0) {
+        printf("daos_array_create() failed (%d)\n", rc);
         *error_code = MPIO_Err_create_code(MPI_SUCCESS,
                                            MPIR_ERR_RECOVERABLE,
                                            myname, __LINE__,

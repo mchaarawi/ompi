@@ -57,6 +57,7 @@ static void my_consensus(void *invec, void *inoutvec, int *len, MPI_Datatype *da
     return;
 }
 
+#ifdef ROMIO_DAOS
 /* MSC - Make a generic DAOS function instead */
 static daos_rank_list_t *
 daos_rank_list_parse(const char *str, const char *sep)
@@ -107,6 +108,7 @@ out_buf:
 out:
 	return ranks;
 }
+#endif /* ROMIO_DAOS */
 
 void ADIO_Init(int *argc, char ***argv, int *error_code)
 {
@@ -140,13 +142,19 @@ void ADIO_Init(int *argc, char ***argv, int *error_code)
 #endif
 
 #ifdef ROMIO_DAOS
-    char *uuid_str;
-    char *svcl_str;
-    char *group;
+    char *uuid_str = NULL;
+    char *svcl_str = NULL;
+    char *group = NULL;
     uuid_t pool_uuid;
     daos_pool_info_t pool_info;
     daos_rank_list_t *svcl = NULL;
     int rc;
+
+    rc = daos_init();
+    if (rc) {
+        printf("daos_init() failed with %d\n", rc);
+        return;
+    }
 
     uuid_str = getenv ("DAOS_POOL");
     if (uuid_str != NULL) {
@@ -155,6 +163,7 @@ void ADIO_Init(int *argc, char ***argv, int *error_code)
             return;
         }
     }
+    printf("POOL UUID = %s\n", uuid_str);
 
     svcl_str = getenv ("DAOS_SVCL");
     if (svcl_str != NULL) {
@@ -164,21 +173,16 @@ void ADIO_Init(int *argc, char ***argv, int *error_code)
             return;
         }
     }
+    printf("SVC LIST = %s\n", svcl_str);
 
     group = getenv ("DAOS_GROUP");
+    if (group != NULL)
+        printf("GROUP = %s\n", group);
+
     rc = daos_pool_connect(pool_uuid, group, svcl, DAOS_PC_RW, &daos_pool_oh,
                            &pool_info, NULL);
     if (rc < 0)
-        printf("Failed to connect to pool\n");
-
-    if (group)
-        free(group);
-    if (svcl)
-        crt_rank_list_free(svcl);
-    if (svcl_str)
-        free(svcl_str);
-    if (uuid_str)
-        free(uuid_str);
+        printf("Failed to connect to pool (%d)\n", rc);
 #endif
 
 #ifdef ADIOI_MPE_LOGGING

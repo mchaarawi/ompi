@@ -89,4 +89,9 @@ extern struct ADIOI_Fns_struct ADIO_GRIDFTP_operations;
 extern struct ADIOI_Fns_struct ADIO_ZOIDFS_operations;
 #endif
 
+#ifdef ROMIO_DAOS
+/* prototypes are in adio/ad_daos/ad_daos.h */
+extern struct ADIOI_Fns_struct ADIO_DAOS_operations;
+#endif
+
 #endif

@@ -8,8 +8,20 @@ void ADIOI_DAOS_Close(ADIO_File fd, int *error_code)
     static char myname[] = "ADIOI_DAOS_CLOSE";
     int rc;
 
+    rc = daos_array_close(cont->oh, NULL);
+    if (rc != 0) {
+        printf("daos_array_close() failed (%d)\n", rc);
+        *error_code = MPIO_Err_create_code(MPI_SUCCESS,
+                                           MPIR_ERR_RECOVERABLE,
+                                           myname, __LINE__,
+                                           ADIOI_DAOS_error_convert(rc),
+                                           "Container Close failed", 0);
+        return;
+    }
+
     rc = daos_cont_close(cont->coh, NULL);
-    if (rc == 0) {
+    if (rc != 0) {
+        printf("daos_cont_close() failed (%d)\n", rc);
         *error_code = MPIO_Err_create_code(MPI_SUCCESS,
                                            MPIR_ERR_RECOVERABLE,
                                            myname, __LINE__,

@@ -42,14 +42,17 @@ static void DAOS_IOContig(ADIO_File fd, void * buf, int count,
 
     /** set memory location */
     sgl.sg_nr.num = 1;
-    daos_iov_set(&iov, buf, len);
+    daos_iov_set(&iov, buf, len * datatype_size);
     sgl.sg_iovs = &iov;
 
     /** set array location */
     ranges.ranges_nr = 1;
-    rg.len = len;
+    rg.len = len * datatype_size;
     rg.index = offset;
     ranges.ranges = &rg;
+
+    printf("offet = %llu\n", offset);
+    printf("size = %zu\n", rg.len);
 
 #ifdef ADIOI_MPE_LOGGING
     MPE_Log_event( ADIOI_MPE_write_a, 0, NULL );
@@ -61,7 +64,15 @@ static void DAOS_IOContig(ADIO_File fd, void * buf, int count,
     }
 
     if (flag == DAOS_WRITE) {
-	    ret = daos_array_write(cont->oh, 0, &ranges, &sgl, NULL, NULL);
+        {
+            char *ptr = (char *)buf;
+            int i;
+            for(i=0 ; i<len; i++) {
+                printf("%d: %d\n", i, *ptr);
+                ptr ++;
+            }
+        }
+	    ret = daos_array_write(cont->oh, 5, &ranges, &sgl, NULL, NULL);
 	    if (ret != 0) {
 		    *error_code = MPIO_Err_create_code(MPI_SUCCESS,
 						       MPIR_ERR_RECOVERABLE,
@@ -72,7 +83,7 @@ static void DAOS_IOContig(ADIO_File fd, void * buf, int count,
 	    }
     }
     else if (flag == DAOS_READ) {
-	    ret = daos_array_read(cont->oh, 0, &ranges, &sgl, NULL, NULL);
+	    ret = daos_array_read(cont->oh, 5, &ranges, &sgl, NULL, NULL);
 	    if (ret != 0) {
 		    *error_code = MPIO_Err_create_code(MPI_SUCCESS,
 						       MPIR_ERR_RECOVERABLE,
@@ -81,7 +92,17 @@ static void DAOS_IOContig(ADIO_File fd, void * buf, int count,
 						       "Error in daos_array_read", 0);
 		    return;
 	    }
+        {
+            char *ptr = (char *)buf;
+            int i;
+            for(i=0 ; i<len; i++) {
+                printf("%d: %d\n", i, *ptr);
+                ptr ++;
+            }
+        }
     }
+
+
 
     if (request) {
         if (ADIOI_DAOS_greq_class == 0) {

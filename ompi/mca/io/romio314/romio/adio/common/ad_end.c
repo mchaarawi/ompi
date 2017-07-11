@@ -55,6 +55,14 @@ void ADIO_End(int *error_code)
 
     MPI_Op_free(&ADIO_same_amode);
 
+#ifdef ROMIO_DAOS
+    int rc;
+
+    rc = daos_fini();
+    if (rc)
+        printf("daos_fini() failed with %d\n", rc);
+#endif
+
     *error_code = MPI_SUCCESS;
 }
 
