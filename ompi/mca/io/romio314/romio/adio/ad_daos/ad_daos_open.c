@@ -195,7 +195,6 @@ void ADIOI_DAOS_Open(ADIO_File fd, int *error_code)
         rc = daos_cont_open(daos_pool_oh, cont->uuid, DAOS_COO_RO, &cont->coh,
                             NULL, NULL);
         if (rc == 0) {
-            printf("failed to open container (%d)\n", rc);
             *error_code = MPIO_Err_create_code(MPI_SUCCESS,
                                                MPIR_ERR_RECOVERABLE,
                                                myname, __LINE__,
@@ -205,6 +204,7 @@ void ADIOI_DAOS_Open(ADIO_File fd, int *error_code)
         }
     }
 
+    /* Create DAOS container */
     if (fd->access_mode & ADIO_CREATE) {
         rc = daos_cont_create(daos_pool_oh, cont->uuid, NULL);
         if (rc != 0) {
@@ -218,7 +218,8 @@ void ADIOI_DAOS_Open(ADIO_File fd, int *error_code)
         }
     }
 
-    rc = daos_cont_open(daos_pool_oh, cont->uuid, DAOS_COO_RO, &cont->coh,
+    /* Open DAOS Container */
+    rc = daos_cont_open(daos_pool_oh, cont->uuid, amode, &cont->coh,
                         NULL, NULL);
     if (rc != 0) {
         printf("failed to open container (%d)\n", rc);
@@ -230,16 +231,16 @@ void ADIOI_DAOS_Open(ADIO_File fd, int *error_code)
         goto err_free;
     }
 
-    /* MSC - hardcode to 1MB for now */
+    /* MSC - hardcode to 1MB for now, check for info hint later. */
     cont->stripe_size = 1048576;
 
-    /* MSC - make OID = 0 for now */
+    /* MSC - make OID = 0 for now; hash file name to oid later. */
     cont->oid.lo = 0;
     cont->oid.mid = 0;
     cont->oid.hi = 0;
     daos_obj_id_generate(&cont->oid, DAOS_OC_REPL_MAX_RW);
 
-    /* MSC - Check if array exists first */
+    /* MSC - Check if array exists first. need to implement daos_array_exists() */
 
     /* Create a DAOS byte array for the file */
     rc = daos_array_create(cont->coh, cont->oid, 0, 1, cont->stripe_size,
