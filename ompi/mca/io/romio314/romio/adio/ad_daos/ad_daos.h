@@ -36,13 +36,20 @@ struct ADIO_DAOS_cont {
     daos_handle_t	oh;
     /** data to store in a dkey block */
     daos_size_t		stripe_size;
+    /** file open mode */
+    unsigned int	amode;
     /** Event queue to store all async requests on file */
     daos_handle_t	eqh;
+    /** epoch currently the handle is at */
+    daos_epoch_t	epoch;
 };
 
 int ADIOI_DAOS_error_convert(int error);
 
 void ADIOI_DAOS_Open(ADIO_File fd, int *error_code);
+void ADIOI_DAOS_OpenColl(ADIO_File fd, int rank,
+                         int access_mode, int *error_code);
+int ADIOI_DAOS_Feature(ADIO_File fd, int flag);
 void ADIOI_DAOS_Close(ADIO_File fd, int *error_code);
 void ADIOI_DAOS_ReadContig(ADIO_File fd, void *buf, int count,
 			   MPI_Datatype datatype, int file_ptr_type,
@@ -60,4 +67,5 @@ void ADIOI_DAOS_IWriteContig(ADIO_File fd, const void *buf, int count,
                              MPI_Datatype datatype, int file_ptr_type,
                              ADIO_Offset offset, MPI_Request *request,
                              int *error_code);
+
 #endif

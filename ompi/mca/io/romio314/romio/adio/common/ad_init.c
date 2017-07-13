@@ -112,6 +112,11 @@ out:
 
 void ADIO_Init(int *argc, char ***argv, int *error_code)
 {
+    int comm_world_rank;
+    int comm_world_size;
+    MPI_Comm_rank( MPI_COMM_WORLD, &comm_world_rank );
+    MPI_Comm_size( MPI_COMM_WORLD, &comm_world_size );
+
 #if defined(ROMIO_XFS) || defined(ROMIO_LUSTRE)
     char *c;
 #endif
@@ -179,10 +184,19 @@ void ADIO_Init(int *argc, char ***argv, int *error_code)
     if (group != NULL)
         printf("GROUP = %s\n", group);
 
-    rc = daos_pool_connect(pool_uuid, group, svcl, DAOS_PC_RW, &daos_pool_oh,
-                           &pool_info, NULL);
-    if (rc < 0)
-        printf("Failed to connect to pool (%d)\n", rc);
+    if (comm_world_rank == 0) {
+        rc = daos_pool_connect(pool_uuid, group, svcl, DAOS_PC_RW, &daos_pool_oh,
+                               &pool_info, NULL);
+        if (rc < 0)
+            printf("Failed to connect to pool (%d)\n", rc);
+    }
+
+    if (comm_world_size > 1) {
+        MPI_Bcast(&pool_info, sizeof(pool_info), MPI_CHAR, 0, MPI_COMM_WORLD);
+        handle_share(&daos_pool_oh, HANDLE_POOL, comm_world_rank, daos_pool_oh,
+                     MPI_COMM_WORLD);
+    }
+
 #endif
 
 #ifdef ADIOI_MPE_LOGGING
@@ -204,9 +218,6 @@ void ADIO_Init(int *argc, char ***argv, int *error_code)
 	MPE_Log_get_state_eventIDs( &ADIOI_MPE_stat_a, &ADIOI_MPE_stat_b);
 	MPE_Log_get_state_eventIDs( &ADIOI_MPE_iread_a, &ADIOI_MPE_iread_b);
 	MPE_Log_get_state_eventIDs( &ADIOI_MPE_iwrite_a, &ADIOI_MPE_iwrite_b);
-
-        int  comm_world_rank;
-        MPI_Comm_rank( MPI_COMM_WORLD, &comm_world_rank );
 
         if ( comm_world_rank == 0 ) {
             MPE_Describe_state( ADIOI_MPE_open_a, ADIOI_MPE_open_b,

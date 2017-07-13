@@ -156,39 +156,9 @@ duuid_hash128(const char *name, void *hash)
 
 void ADIOI_DAOS_Open(ADIO_File fd, int *error_code)
 {
-    int amode;
-    struct ADIO_DAOS_cont *cont;
+    struct ADIO_DAOS_cont *cont = fd->fs_ptr;
     static char myname[] = "ADIOI_DAOS_OPEN";
     int rc;
-
-    if (fd->access_mode & ADIO_WRONLY) {
-	*error_code = ADIOI_Err_create_code(myname, fd->filename, errno);
-        return;
-    }
-
-    amode = 0;
-    if (fd->access_mode & ADIO_RDONLY)
-	amode = amode | DAOS_COO_RO;        
-    if (fd->access_mode & ADIO_RDWR)
-	amode = amode | DAOS_COO_RW;
-
-    cont = (struct ADIO_DAOS_cont *)ADIOI_Malloc(sizeof(struct ADIO_DAOS_cont));
-    if (cont == NULL) {
-        printf("mem alloc failed.\n");
-	*error_code = MPIO_Err_create_code(MPI_SUCCESS,
-					   MPIR_ERR_RECOVERABLE,
-					   myname, __LINE__,
-					   MPI_ERR_UNKNOWN,
-					   "Error allocating memory", 0);
-	return;
-    }
-
-#ifdef ADIOI_MPE_LOGGING
-    MPE_Log_event( ADIOI_MPE_open_a, 0, NULL );
-#endif
-
-    /* Hash file name to create uuid */
-    duuid_hash128(fd->filename, &cont->uuid);
 
     /* check & Fail if container exists */
     if (fd->access_mode & ADIO_EXCL) {
@@ -214,12 +184,12 @@ void ADIOI_DAOS_Open(ADIO_File fd, int *error_code)
                                                myname, __LINE__,
                                                ADIOI_DAOS_error_convert(rc),
                                                "Container Create Failed", 0);
-            goto err_free;
+            goto out;
         }
     }
 
     /* Open DAOS Container */
-    rc = daos_cont_open(daos_pool_oh, cont->uuid, amode, &cont->coh,
+    rc = daos_cont_open(daos_pool_oh, cont->uuid, cont->amode, &cont->coh,
                         NULL, NULL);
     if (rc != 0) {
         printf("failed to open container (%d)\n", rc);
@@ -228,8 +198,76 @@ void ADIOI_DAOS_Open(ADIO_File fd, int *error_code)
                                            myname, __LINE__,
                                            ADIOI_DAOS_error_convert(rc),
                                            "Container Open Failed", 0);
-        goto err_free;
+        goto out;
     }
+
+    /* MSC - Check if array exists first. need to implement daos_array_exists() */
+
+    /* Create a DAOS byte array for the file */
+    rc = daos_array_create(cont->coh, cont->oid, cont->epoch, 1,
+                           cont->stripe_size, &cont->oh, NULL);
+    if (rc != 0) {
+        printf("daos_array_create() failed (%d)\n", rc);
+        *error_code = MPIO_Err_create_code(MPI_SUCCESS,
+                                           MPIR_ERR_RECOVERABLE,
+                                           myname, __LINE__,
+                                           ADIOI_DAOS_error_convert(rc),
+                                           "Array Create Failed", 0);
+        goto err_cont;
+    }
+
+    *error_code = MPI_SUCCESS;
+
+out:
+    return;
+err_cont:
+    daos_cont_close(cont->coh, NULL);
+    goto out;
+}
+
+void ADIOI_DAOS_OpenColl(ADIO_File fd, int rank,
+	int access_mode, int *error_code)
+{
+    struct ADIO_DAOS_cont *cont;
+    int amode;
+    MPI_Comm comm = fd->comm;
+    int mpi_size;
+    int rc;
+    static char myname[] = "ADIOI_DAOS_OPENCOLL";
+
+    MPI_Comm_size(comm, &mpi_size);
+
+    if (access_mode & ADIO_WRONLY) {
+	*error_code = ADIOI_Err_create_code(myname, fd->filename, errno);
+        return;
+    }
+
+    amode = 0;
+    if (access_mode & ADIO_RDONLY)
+	amode = amode | DAOS_COO_RO;        
+    if (access_mode & ADIO_RDWR)
+	amode = amode | DAOS_COO_RW;
+
+    cont = (struct ADIO_DAOS_cont *)ADIOI_Malloc(sizeof(struct ADIO_DAOS_cont));
+    if (cont == NULL) {
+        printf("mem alloc failed.\n");
+	*error_code = MPIO_Err_create_code(MPI_SUCCESS,
+					   MPIR_ERR_RECOVERABLE,
+					   myname, __LINE__,
+					   MPI_ERR_UNKNOWN,
+					   "Error allocating memory", 0);
+	return;
+    }
+
+#ifdef ADIOI_MPE_LOGGING
+    MPE_Log_event( ADIOI_MPE_open_a, 0, NULL );
+#endif
+    fd->access_mode = access_mode;
+    fd->fs_ptr = cont;
+
+    cont->amode = amode;
+    /* Hash file name to create uuid */
+    duuid_hash128(fd->filename, &cont->uuid);
 
     /* MSC - hardcode to 1MB for now, check for info hint later. */
     cont->stripe_size = 1048576;
@@ -240,33 +278,49 @@ void ADIOI_DAOS_Open(ADIO_File fd, int *error_code)
     cont->oid.hi = 0;
     daos_obj_id_generate(&cont->oid, DAOS_OC_REPL_MAX_RW);
 
-    /* MSC - Check if array exists first. need to implement daos_array_exists() */
+    /* MSC - set to 0 for now.. do hold later */
+    cont->epoch = 0;
 
-    /* Create a DAOS byte array for the file */
-    rc = daos_array_create(cont->coh, cont->oid, 0, 1, cont->stripe_size,
-                           &cont->oh, NULL);
-    if (rc != 0) {
-        printf("daos_array_create() failed (%d)\n", rc);
-        *error_code = MPIO_Err_create_code(MPI_SUCCESS,
-                                           MPIR_ERR_RECOVERABLE,
-                                           myname, __LINE__,
-                                           ADIOI_DAOS_error_convert(rc),
-                                           "Array Create Failed", 0);
-        daos_cont_close(cont->coh, NULL);
-        free(cont);
-        return;
+    if (rank == 0)
+        (*(fd->fns->ADIOI_xxx_Open))(fd, error_code);
+
+    if (mpi_size > 1)
+        MPI_Bcast(error_code, 1, MPI_INT, 0, comm);
+
+    if (*error_code != MPI_SUCCESS)
+        goto err_free;
+
+    if (mpi_size > 1)
+        handle_share(&cont->coh, HANDLE_CO, rank, daos_pool_oh, comm);
+
+    /* open array on other ranks */
+    if (rank != 0) {
+        daos_size_t elem_size;
+        daos_size_t stripe_size;
+
+        rc = daos_array_open(cont->coh, cont->oid, cont->epoch, DAOS_OO_RW,
+                             &elem_size, &stripe_size, &cont->oh, NULL);
+        if (rc != 0) {
+            printf("daos_array_open() failed (%d)\n", rc);
+            *error_code = MPIO_Err_create_code(MPI_SUCCESS,
+                                               MPIR_ERR_RECOVERABLE,
+                                               myname, __LINE__,
+                                               ADIOI_DAOS_error_convert(rc),
+                                               "Array Open Failed", 0);
+            goto err_free;
+        }
+        if (elem_size != 1 || stripe_size != cont->stripe_size) {
+            *error_code = MPI_UNDEFINED;
+            goto err_free;
+        }
     }
 
 #ifdef ADIOI_MPE_LOGGING
     MPE_Log_event( ADIOI_MPE_open_b, 0, NULL );
 #endif
 
-    fd->fs_ptr = cont;
-    *error_code = MPI_SUCCESS;
     return;
 
-err_cont:
-    daos_cont_close(cont->coh, NULL);
 err_free:
     free(cont);
     return;

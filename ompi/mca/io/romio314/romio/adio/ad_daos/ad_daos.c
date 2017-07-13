@@ -7,7 +7,7 @@
 
 struct ADIOI_Fns_struct ADIO_DAOS_operations = {
     ADIOI_DAOS_Open, /* Open */
-    ADIOI_GEN_OpenColl, /* OpenColl */
+    ADIOI_DAOS_OpenColl, /* OpenColl */
     ADIOI_DAOS_ReadContig, /* ReadContig */
     ADIOI_DAOS_WriteContig, /* WriteContig */
     ADIOI_GEN_ReadStridedColl, /* ReadStridedColl */
