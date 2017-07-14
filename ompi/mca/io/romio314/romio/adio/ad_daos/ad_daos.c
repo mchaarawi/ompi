@@ -15,8 +15,8 @@ struct ADIOI_Fns_struct ADIO_DAOS_operations = {
     ADIOI_GEN_SeekIndividual, /* SeekIndividual */
     ADIOI_GEN_Fcntl, /* Fcntl */
     ADIOI_GEN_SetInfo, /* SetInfo */
-    ADIOI_GEN_ReadStrided, /* ReadStrided */
-    ADIOI_GEN_WriteStrided, /* WriteStrided */
+    ADIOI_DAOS_ReadStrided, /* ReadStrided */
+    ADIOI_DAOS_WriteStrided, /* WriteStrided */
     ADIOI_DAOS_Close, /* Close */
 #ifdef ROMIO_HAVE_WORKING_AIO
     ADIOI_GEN_IreadContig, /* IreadContig */
