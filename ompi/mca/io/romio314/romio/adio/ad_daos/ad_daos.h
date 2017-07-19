@@ -51,6 +51,8 @@ void ADIOI_DAOS_OpenColl(ADIO_File fd, int rank,
                          int access_mode, int *error_code);
 int ADIOI_DAOS_Feature(ADIO_File fd, int flag);
 void ADIOI_DAOS_Close(ADIO_File fd, int *error_code);
+void ADIOI_DAOS_Fcntl(ADIO_File fd, int flag, ADIO_Fcntl_t *fcntl_struct,
+                      int *error_code);
 void ADIOI_DAOS_ReadContig(ADIO_File fd, void *buf, int count,
 			   MPI_Datatype datatype, int file_ptr_type,
 			   ADIO_Offset offset, ADIO_Status *status,
