@@ -18,22 +18,17 @@ struct ADIOI_Fns_struct ADIO_DAOS_operations = {
     ADIOI_DAOS_ReadStrided, /* ReadStrided */
     ADIOI_DAOS_WriteStrided, /* WriteStrided */
     ADIOI_DAOS_Close, /* Close */
-#ifdef ROMIO_HAVE_WORKING_AIO
-    ADIOI_GEN_IreadContig, /* IreadContig */
-    ADIOI_GEN_IwriteContig, /* IwriteContig */
-#else
-    ADIOI_FAKE_IreadContig, /* IreadContig */
-    ADIOI_FAKE_IwriteContig, /* IwriteContig */
-#endif
-    ADIOI_GEN_IODone, /* ReadDone */
-    ADIOI_GEN_IODone, /* WriteDone */
-    ADIOI_GEN_IOComplete, /* ReadComplete */
-    ADIOI_GEN_IOComplete, /* WriteComplete */
+    ADIOI_DAOS_IReadContig, /* IreadContig */
+    ADIOI_DAOS_IWriteContig, /* IwriteContig */
+    ADIOI_FAKE_IODone, /* ReadDone */
+    ADIOI_FAKE_IODone, /* WriteDone */
+    ADIOI_FAKE_IOComplete, /* ReadComplete */
+    ADIOI_FAKE_IOComplete, /* WriteComplete */
     ADIOI_GEN_IreadStrided, /* IreadStrided */
     ADIOI_GEN_IwriteStrided, /* IwriteStrided */
     ADIOI_GEN_Flush, /* Flush */
-    ADIOI_GEN_Resize, /* Resize */
-    ADIOI_GEN_Delete, /* Delete */
+    ADIOI_DAOS_Resize, /* Resize */
+    ADIOI_DAOS_Delete, /* Delete */
     ADIOI_DAOS_Feature, /* Features */
     "DAOS: ROMIO driver for DAOS",
 };

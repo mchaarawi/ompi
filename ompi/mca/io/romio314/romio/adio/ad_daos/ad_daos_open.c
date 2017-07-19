@@ -325,3 +325,27 @@ err_free:
     free(cont);
     return;
 }
+
+void ADIOI_DAOS_Delete(const char *filename, int *error_code)
+{
+    int ret;
+    uuid_t uuid;
+    static char myname[] = "ADIOI_DAOS_DELETE";
+
+    /* Hash file name to container uuid */
+    duuid_hash128(filename, &uuid);
+
+    ret = daos_cont_destroy(daos_pool_oh, uuid, 1, NULL);
+    if (ret != 0) {
+        printf("failed to destroy container (%d)\n", ret);
+        *error_code = MPIO_Err_create_code(MPI_SUCCESS,
+                                           MPIR_ERR_RECOVERABLE,
+                                           myname, __LINE__,
+                                           ADIOI_DAOS_error_convert(ret),
+                                           "Container Create Failed", 0);
+        return;
+    }
+
+    *error_code = MPI_SUCCESS;
+    return;
+}
