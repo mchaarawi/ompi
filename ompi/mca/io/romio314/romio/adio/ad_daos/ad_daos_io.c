@@ -54,7 +54,11 @@ static void DAOS_IOContig(ADIO_File fd, void * buf, int count,
 #ifdef ADIOI_MPE_LOGGING
     MPE_Log_event( ADIOI_MPE_write_a, 0, NULL );
 #endif
-
+#if 0
+    printf("OP %d\n",flag);
+    printf("Offset: %llu\n", offset);
+    printf("Size: %zu\n", len);
+#endif
     if (request) {
         aio_req = (ADIOI_AIO_Request*)ADIOI_Calloc(sizeof(ADIOI_AIO_Request), 1);
         daos_event_init(&aio_req->daos_event, DAOS_HDL_INVAL, NULL);
