@@ -28,6 +28,9 @@ void ADIOI_DAOS_Fcntl(ADIO_File fd, int flag, ADIO_Fcntl_t *fcntl_struct,
 	return;
 
     case ADIO_FCNTL_SET_DISKSPACE:
+        *error_code = MPI_SUCCESS;
+        return;
+
     case ADIO_FCNTL_SET_ATOMICITY:
     default:
 	*error_code = MPIO_Err_create_code(MPI_SUCCESS,

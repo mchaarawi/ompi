@@ -281,12 +281,12 @@ int ADIOI_DAOS_StridedListIO(ADIO_File fd, void *buf, int count,
         /* Create DAOS Array ranges */
         daos_array_ranges_t ranges;
         daos_range_t rg[MAX_OL_COUNT];
-        ranges.ranges_nr = file_ol_count;
+        ranges.arr_nr = file_ol_count;
         for (i = 0; i < file_ol_count; i++) {
-            rg[i].len = file_len_arr[i];
-            rg[i].index = file_off_arr[i];
+            rg[i].rg_len = file_len_arr[i];
+            rg[i].rg_idx = file_off_arr[i];
         }
-        ranges.ranges = rg;
+        ranges.arr_rgs = rg;
 
 	/* Run list I/O operation */
 	if (rw_type == DAOS_READ)

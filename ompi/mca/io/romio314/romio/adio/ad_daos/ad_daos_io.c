@@ -46,10 +46,10 @@ static void DAOS_IOContig(ADIO_File fd, void * buf, int count,
     sgl.sg_iovs = &iov;
 
     /** set array location */
-    ranges.ranges_nr = 1;
-    rg.len = len;
-    rg.index = offset;
-    ranges.ranges = &rg;
+    ranges.arr_nr = 1;
+    rg.rg_len = len;
+    rg.rg_idx = offset;
+    ranges.arr_rgs = &rg;
 
 #ifdef ADIOI_MPE_LOGGING
     MPE_Log_event( ADIOI_MPE_write_a, 0, NULL );
