@@ -59,6 +59,7 @@ static void DAOS_IOContig(ADIO_File fd, void * buf, int count,
     printf("Offset: %llu\n", offset);
     printf("Size: %zu\n", len);
 #endif
+
     if (request) {
         aio_req = (ADIOI_AIO_Request*)ADIOI_Calloc(sizeof(ADIOI_AIO_Request), 1);
         daos_event_init(&aio_req->daos_event, DAOS_HDL_INVAL, NULL);

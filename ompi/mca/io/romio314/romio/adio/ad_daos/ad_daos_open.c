@@ -203,15 +203,32 @@ void ADIOI_DAOS_Open(ADIO_File fd, int *error_code)
         goto out;
     }
 
-    /* MSC - do epoch hold */
-    rc = daos_epoch_hold(cont->coh, &cont->epoch, NULL, NULL);
-    if (rc != 0) {
-        *error_code = MPIO_Err_create_code(MPI_SUCCESS,
-                                           MPIR_ERR_RECOVERABLE,
-                                           myname, __LINE__,
-                                           ADIOI_DAOS_error_convert(rc),
-                                           "Epoch Hold Failed", 0);
-        goto err_cont;
+    if (cont->amode == DAOS_COO_RW) {
+        rc = daos_epoch_hold(cont->coh, &cont->epoch, NULL, NULL);
+        if (rc != 0) {
+            printf("daos_epoch_hold failed (%d)\n", rc);
+            *error_code = MPIO_Err_create_code(MPI_SUCCESS,
+                                               MPIR_ERR_RECOVERABLE,
+                                               myname, __LINE__,
+                                               ADIOI_DAOS_error_convert(rc),
+                                               "Epoch Hold Failed", 0);
+            goto err_cont;
+        }
+    }
+    else {
+        daos_epoch_state_t state;
+
+        rc = daos_epoch_query(cont->coh, &state, NULL);
+        if (rc != 0) {
+            printf("daos_epoch_query failed (%d)\n", rc);
+            *error_code = MPIO_Err_create_code(MPI_SUCCESS,
+                                               MPIR_ERR_RECOVERABLE,
+                                               myname, __LINE__,
+                                               ADIOI_DAOS_error_convert(rc),
+                                               "Epoch Hold Failed", 0);
+            goto err_cont;
+        }
+        cont->epoch = state.es_hce;
     }
 
     /* open array if not create mode */

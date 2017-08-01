@@ -20,6 +20,15 @@ int ADIOI_DAOS_aio_poll_fn(void *extra_state, MPI_Status *status);
 int ADIOI_DAOS_aio_wait_fn(int count, void ** array_of_states,
                            double timeout, MPI_Status *status);
 
+static void print_buf_file_ol_pairs(int64_t buf_off_arr[],
+                                    int32_t buf_len_arr[],
+                                    int32_t buf_ol_count,
+                                    int64_t file_off_arr[],
+                                    int32_t file_len_arr[],
+                                    int32_t file_ol_count,
+                                    void *buf,
+                                    int rw_type);
+
 #define COALESCE_REGIONS  /* TODO: would we ever want to *not* coalesce? */
 #define MAX_OL_COUNT 64
 int ADIOI_DAOS_StridedListIO(ADIO_File fd, void *buf, int count,
@@ -183,6 +192,7 @@ int ADIOI_DAOS_StridedListIO(ADIO_File fd, void *buf, int count,
 	    }
 	}
     }
+
 #ifdef DEBUG_LIST
     fprintf(stderr, "ADIOI_DAOS_StridedListIO: (fd->fp_ind=%Ld,fd->disp=%Ld,"
             " offset=%Ld)\n(flat_file_index=%d,cur_flat_file_reg_off=%Ld,"
@@ -274,8 +284,9 @@ int ADIOI_DAOS_StridedListIO(ADIO_File fd, void *buf, int count,
         daos_sg_list_t sgl;
         daos_iov_t iovs[MAX_OL_COUNT];
         sgl.sg_nr.num = buf_ol_count;
+        sgl.sg_nr.num_out = 0;
         for (i = 0; i < buf_ol_count; i++)
-            daos_iov_set(&iovs[i], (void *)buf_off_arr[i], buf_len_arr[i]);
+            daos_iov_set(&iovs[i], (char *) buf + buf_off_arr[i], buf_len_arr[i]);
         sgl.sg_iovs = iovs;
 
         /* Create DAOS Array ranges */
@@ -289,7 +300,7 @@ int ADIOI_DAOS_StridedListIO(ADIO_File fd, void *buf, int count,
         ranges.arr_rgs = rg;
 
 	/* Run list I/O operation */
-	if (rw_type == DAOS_READ)
+	if (rw_type == DAOS_WRITE)
 	{
             ret = daos_array_write(cont->oh, cont->epoch, &ranges, &sgl,
                                    NULL, NULL);
@@ -634,7 +645,7 @@ int gen_listio_arr(ADIOI_Flatlist_node *flat_buf_p,
     return 0;
 }
 
-void print_buf_file_ol_pairs(int64_t buf_off_arr[],
+static void print_buf_file_ol_pairs(int64_t buf_off_arr[],
 			     int32_t buf_len_arr[],
 			     int32_t buf_ol_count,
 			     int64_t file_off_arr[],
